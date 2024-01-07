@@ -1,5 +1,10 @@
 #include "../Precompiled.h"
 
+#define TOGGLE_WINDOW_STYLE(flag, condition) \
+    LONG_PTR windowStyle = GetWindowLongPtr(Globals::m_Instance, GWL_EXSTYLE); \
+    windowStyle = (condition) ? (windowStyle & ~(flag) ) : (windowStyle | (flag)); \
+    SetWindowLongPtr(Globals::m_Instance, GWL_EXSTYLE, windowStyle); \
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 LRESULT CALLBACK WindowProcess( HWND window, UINT message, WPARAM wparam, LPARAM lparam )
 {
@@ -37,38 +42,21 @@ bool Window::Render( )
         if (message.message == WM_QUIT)
             bRunning = false;
 
-        static bool bToggled = false;
-        if (GetAsyncKeyState( Config::Get<int>(g_Variables.m_iMenuKey) ) & 1 && !bToggled)
-        {
+        if (GetAsyncKeyState( Config::Get<int>(g_Variables.m_iMenuKey) ) & 1 )
             Gui::m_bOpen = !Gui::m_bOpen;
-            SetForegroundWindow( Globals::m_Instance );
-            bToggled = true;
-        }
-        else if (!GetAsyncKeyState(Config::Get<int>(g_Variables.m_iMenuKey)) & 1)
-        {
-            LONG_PTR windowStyle = GetWindowLongPtr( Globals::m_Instance, GWL_EXSTYLE );
-            SetWindowLongPtr( Globals::m_Instance, GWL_EXSTYLE, windowStyle | WS_EX_TRANSPARENT );
-            bToggled = false;
-        }
 
         if (GetAsyncKeyState(Config::Get<int>(g_Variables.m_iUnloadKey)) & 1)
-        {
-            return false;
-        }
+            bRunning = false;
 
         ImGui_ImplDX11_NewFrame( );
         ImGui_ImplWin32_NewFrame( );
 
         ImGui::NewFrame( );
+        
+        TOGGLE_WINDOW_STYLE( WS_EX_TRANSPARENT, Gui::m_bOpen );
 
         if (Gui::m_bOpen)
-        {
-            LONG_PTR windowStyle = GetWindowLongPtr( Globals::m_Instance, GWL_EXSTYLE );
-            windowStyle &= ~WS_EX_TRANSPARENT;
-            SetWindowLongPtr( Globals::m_Instance, GWL_EXSTYLE, windowStyle );
-
             Gui::Render( );
-        }
 
         ImDrawList* pBackgroundDrawList = ImGui::GetBackgroundDrawList( );
         Draw::RenderDrawData( pBackgroundDrawList );
